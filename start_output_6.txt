@@ -1,0 +1,6 @@
+Starting project at C:\Users\HP\Desktop\projects\Refactor\mirath-zakaat
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Waiting on http://localhost:8087
+Logs for your project will appear below.
+^C^C
