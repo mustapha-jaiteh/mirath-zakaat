@@ -1,10 +1,7 @@
 import { View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, I18nManager, useWindowDimensions } from 'react-native';
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-
-// Placeholder API Key - User should replace this
-const API_KEY = 'YOUR_METALS_API_KEY';
+import { fetchGoldRates } from '../services/goldService';
 
 const ZakaatScreen = () => {
     const { t, i18n } = useTranslation();
@@ -26,6 +23,22 @@ const ZakaatScreen = () => {
 
     const [loading, setLoading] = useState(false);
     const [currency, setCurrency] = useState('GMD');
+    const [lastFetched, setLastFetched] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadInitialRates();
+    }, []);
+
+    const loadInitialRates = async () => {
+        setLoading(true);
+        const data = await fetchGoldRates(currency);
+        if (data) {
+            setGoldRate(data.gold);
+            setSilverRate(data.silver);
+            setLastFetched(data.lastFetched);
+        }
+        setLoading(false);
+    };
 
     interface ZakaatResult {
         totalWealth: number;
@@ -38,29 +51,15 @@ const ZakaatScreen = () => {
 
     const fetchRates = async () => {
         setLoading(true);
-        try {
-            if (API_KEY === 'YOUR_METALS_API_KEY') {
-                await new Promise(r => setTimeout(r, 1500));
-                Alert.alert('Developer Preview', 'Please add a valid Metals-API Key for live pricing. Using market estimates.');
-                setGoldRate('5150');
-                setSilverRate('62');
-            } else {
-                const response = await axios.get(`https://metals-api.com/api/latest?access_key=${API_KEY}&base=USD&symbols=XAU,XAG`);
-                if (response.data.success) {
-                    const usdToGoldOz = response.data.rates.XAU;
-                    const usdToSilverOz = response.data.rates.XAG;
-                    const goldPriceUSDPerGram = (1 / usdToGoldOz) / 31.1035;
-                    const silverPriceUSDPerGram = (1 / usdToSilverOz) / 31.1035;
-                    const gmdRate = 70;
-                    setGoldRate((goldPriceUSDPerGram * gmdRate).toFixed(2));
-                    setSilverRate((silverPriceUSDPerGram * gmdRate).toFixed(2));
-                }
-            }
-        } catch (error) {
-            Alert.alert('Error', 'Failed to fetch rates. Please enter manually.');
-        } finally {
-            setLoading(false);
+        const data = await fetchGoldRates(currency);
+        if (data) {
+            setGoldRate(data.gold);
+            setSilverRate(data.silver);
+            setLastFetched(data.lastFetched);
+        } else {
+            Alert.alert('Error', 'Failed to fetch rates. Please check your connection or enter manually.');
         }
+        setLoading(false);
     };
 
     const calculateZakaat = () => {
@@ -120,11 +119,16 @@ const ZakaatScreen = () => {
                     </View>
                     <TouchableOpacity
                         onPress={fetchRates}
-                        className="bg-gray-800 p-2 rounded-lg items-center flex-row justify-center"
+                        className="bg-gray-800 p-2 rounded-lg items-center flex-row justify-center mb-2"
                     >
                         {loading && <ActivityIndicator size="small" color="#fff" style={{ [isRTL ? 'marginLeft' : 'marginRight']: 8 }} />}
                         <Text className="text-white font-medium" style={{ writingDirection }}>{t('zakaat.fetch_rates')}</Text>
                     </TouchableOpacity>
+                    {lastFetched && (
+                        <Text className="text-gray-400 text-[10px] italic text-center" style={{ writingDirection }}>
+                            {t('zakaat.last_updated')} {lastFetched}
+                        </Text>
+                    )}
                 </View>
 
                 <View className="bg-white p-4 rounded-xl shadow-sm mb-4">

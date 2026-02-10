@@ -39,6 +39,7 @@
         "eligible": "Eligible for Zakaat",
         "not_eligible": "Not Eligible (Below Nisaab)",
         "payable": "Total Zakaat Payable",
+        "last_updated": "Last updated: ",
         "note": "* Zakaat is calculated at 2.5% of total wealth if it exceeds the Nisaab (threshold of 85g gold). The wealth must have been held for one full lunar year."
     },
     "mirath": {
@@ -110,6 +111,10 @@
             "maternal_1_6": "1/6 (Single maternal sibling)",
             "maternal_1_3": "1/3 (Multiple maternal siblings)",
             "paternal_sister_1_6": "1/6 (With one full sister)",
+            "grandfather_sharing": "Sharing/Muqasamah (Best for GF)",
+            "grandfather_1_3": "1/3 of total (Best for GF)",
+            "grandfather_1_3_rem": "1/3 of remainder (Best for GF)",
+            "grandfather_1_6": "1/6 of total (Minimum share)",
             "asabah": "Asabah (Residuary)",
             "asabah_2_1_descendants": "Asabah (2:1 ratio with daughters)",
             "asabah_1_2_descendants": "Asabah (1:2 ratio with sons)",

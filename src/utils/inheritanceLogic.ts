@@ -103,10 +103,11 @@ export const calculateInheritance = (input: CalculationInput): ShareResult[] => 
         counts.paternal_brother = 0; counts.paternal_sister = 0;
         counts.maternal_brother = 0; counts.maternal_sister = 0;
     }
+
     if (hasGrandfather) {
+        // Grandfather only excludes maternal siblings
         counts.maternal_brother = 0; counts.maternal_sister = 0;
-        counts.full_brother = 0; counts.full_sister = 0;
-        counts.paternal_brother = 0; counts.paternal_sister = 0;
+        // Full and Paternal siblings are NOT excluded by grandfather in majority opinion
     }
 
     // Distant male relatives exclusion
@@ -159,14 +160,6 @@ export const calculateInheritance = (input: CalculationInput): ShareResult[] => 
             shares.push({ type: 'father', share: 1 / 6, isFard: true, note: '1/6 + Residue (Existence of female descendant)', noteKey: 'mirath_results.rules.father_1_6_residue' });
         } else {
             shares.push({ type: 'father', share: 0, isFard: false, note: 'Residuary (No descendants)', noteKey: 'mirath_results.rules.father_residue' });
-        }
-    } else if (counts.grandfather > 0) {
-        if (hasMaleDescendant) {
-            shares.push({ type: 'grandfather', share: 1 / 6, isFard: true, note: '1/6 (Existence of male descendant)', noteKey: 'mirath_results.rules.father_1_6' });
-        } else if (hasDescendant) {
-            shares.push({ type: 'grandfather', share: 1 / 6, isFard: true, note: '1/6 + Residue (Existence of female descendant)', noteKey: 'mirath_results.rules.father_1_6_residue' });
-        } else {
-            shares.push({ type: 'grandfather', share: 0, isFard: false, note: 'Residuary (No descendants)', noteKey: 'mirath_results.rules.father_residue' });
         }
     }
 
@@ -229,6 +222,63 @@ export const calculateInheritance = (input: CalculationInput): ShareResult[] => 
 
         if (counts.maternal_brother > 0) shares.push({ type: 'maternal_brother', share: share * (counts.maternal_brother / totalMaternal), isFard: true, note, noteKey });
         if (counts.maternal_sister > 0) shares.push({ type: 'maternal_sister', share: share * (counts.maternal_sister / totalMaternal), isFard: true, note, noteKey });
+    }
+
+    if (counts.grandfather > 0) {
+        const hasAgnaticSiblings = (counts.full_brother + counts.full_sister + counts.paternal_brother + counts.paternal_sister) > 0;
+
+        if (hasAgnaticSiblings) {
+            // Majority Opinion for Grandfather with Siblings
+            const otherFardHeirs = shares.filter(s => ['husband', 'wife', 'mother', 'grandmother', 'daughter', 'granddaughter'].includes(s.type));
+            const totalOtherFardShare = otherFardHeirs.reduce((sum, s) => sum + s.share, 0);
+            const remainder = 1 - totalOtherFardShare;
+
+            const totalBrothers = counts.full_brother + counts.paternal_brother;
+            const totalSisters = counts.full_sister + counts.paternal_sister;
+            // Muqasamah parts: Grandfather (2), each brother (2), each sister (1)
+            const muqasamahParts = 2 + (totalBrothers * 2) + totalSisters;
+            const muqasamahShare = (2 / muqasamahParts) * (otherFardHeirs.length > 0 ? remainder : 1);
+
+            if (otherFardHeirs.length === 0) {
+                // Case 1: No other fixed-share heirs
+                const oneThirdShare = 1 / 3;
+                if (muqasamahShare >= oneThirdShare) {
+                    shares.push({ type: 'grandfather', share: muqasamahShare, isFard: false, note: 'Sharing (Muqasamah - More advantageous)', noteKey: 'mirath_results.rules.grandfather_sharing' });
+                } else {
+                    shares.push({ type: 'grandfather', share: oneThirdShare, isFard: true, note: '1/3 of total (More advantageous)', noteKey: 'mirath_results.rules.grandfather_1_3' });
+                }
+            } else {
+                // Case 2: Presence of other fixed-share heirs
+                if (remainder <= (1 / 6) + 0.000001) {
+                    shares.push({ type: 'grandfather', share: 1 / 6, isFard: true, note: '1/6 (Minimum share)', noteKey: 'mirath_results.rules.grandfather_1_6' });
+                    // All siblings are excluded when grandfather takes 1/6 and nothing/little remains
+                    counts.full_brother = 0; counts.full_sister = 0;
+                    counts.paternal_brother = 0; counts.paternal_sister = 0;
+                } else {
+                    const oneThirdRemainderShare = remainder / 3;
+                    const oneSixthTotalShare = 1 / 6;
+
+                    const bestShare = Math.max(muqasamahShare, oneThirdRemainderShare, oneSixthTotalShare);
+
+                    if (bestShare === muqasamahShare) {
+                        shares.push({ type: 'grandfather', share: muqasamahShare, isFard: false, note: 'Sharing (Muqasamah - Best option)', noteKey: 'mirath_results.rules.grandfather_sharing' });
+                    } else if (bestShare === oneThirdRemainderShare) {
+                        shares.push({ type: 'grandfather', share: oneThirdRemainderShare, isFard: true, note: '1/3 of remainder (Best option)', noteKey: 'mirath_results.rules.grandfather_1_3_rem' });
+                    } else {
+                        shares.push({ type: 'grandfather', share: oneSixthTotalShare, isFard: true, note: '1/6 of total (Best option)', noteKey: 'mirath_results.rules.grandfather_1_6' });
+                    }
+                }
+            }
+        } else {
+            // Traditional logic if no siblings
+            if (hasMaleDescendant) {
+                shares.push({ type: 'grandfather', share: 1 / 6, isFard: true, note: '1/6 (Existence of male descendant)', noteKey: 'mirath_results.rules.father_1_6' });
+            } else if (hasDescendant) {
+                shares.push({ type: 'grandfather', share: 1 / 6, isFard: true, note: '1/6 + Residue (Existence of female descendant)', noteKey: 'mirath_results.rules.father_1_6_residue' });
+            } else {
+                shares.push({ type: 'grandfather', share: 0, isFard: false, note: 'Residuary (No descendants)', noteKey: 'mirath_results.rules.father_residue' });
+            }
+        }
     }
 
     if (!hasMaleDescendant && !hasFather && !hasGrandfather && counts.full_brother === 0) {
@@ -299,10 +349,32 @@ export const calculateInheritance = (input: CalculationInput): ShareResult[] => 
             residue = 0;
         }
         else if (counts.grandfather > 0) {
+            const hasAgnaticSiblings = (counts.full_brother + counts.full_sister + counts.paternal_brother + counts.paternal_sister) > 0;
             const grandfatherShare = shares.find(s => s.type === 'grandfather');
-            if (grandfatherShare) { grandfatherShare.share += residue; grandfatherShare.note += ' + Residue'; }
-            else shares.push({ type: 'grandfather', share: residue, isFard: false, note: 'Asabah', noteKey: 'mirath_results.rules.asabah' });
-            residue = 0;
+
+            if (hasAgnaticSiblings) {
+                // Brothers and sisters divide the rest
+                const totalBrothers = counts.full_brother + counts.paternal_brother;
+                const totalSisters = counts.full_sister + counts.paternal_sister;
+
+                if (totalBrothers > 0 || totalSisters > 0) {
+                    const totalParts = (totalBrothers * 2) + totalSisters;
+                    const unitShare = residue / totalParts;
+
+                    if (counts.full_brother > 0 || counts.full_sister > 0) {
+                        if (counts.full_brother > 0) shares.push({ type: 'full_brother', share: (unitShare * 2 * counts.full_brother), isFard: false, note: 'Asabah (2:1 ratio)', noteKey: 'mirath_results.rules.asabah_2_1_siblings' });
+                        if (counts.full_sister > 0) shares.push({ type: 'full_sister', share: (unitShare * counts.full_sister), isFard: false, note: 'Asabah (1:2 ratio)', noteKey: 'mirath_results.rules.asabah_1_2_siblings' });
+                    } else {
+                        if (counts.paternal_brother > 0) shares.push({ type: 'paternal_brother', share: (unitShare * 2 * counts.paternal_brother), isFard: false, note: 'Asabah (2:1 ratio)', noteKey: 'mirath_results.rules.asabah_2_1_siblings' });
+                        if (counts.paternal_sister > 0) shares.push({ type: 'paternal_sister', share: (unitShare * counts.paternal_sister), isFard: false, note: 'Asabah (1:2 ratio)', noteKey: 'mirath_results.rules.asabah_1_2_siblings' });
+                    }
+                    residue = 0;
+                }
+            } else {
+                if (grandfatherShare) { grandfatherShare.share += residue; grandfatherShare.note += ' + Residue'; }
+                else shares.push({ type: 'grandfather', share: residue, isFard: false, note: 'Asabah', noteKey: 'mirath_results.rules.asabah' });
+                residue = 0;
+            }
         }
         else if (counts.full_brother > 0 || (counts.full_sister > 0 && (hasDaughter || hasGranddaughter))) {
             const numBrothers = counts.full_brother;
