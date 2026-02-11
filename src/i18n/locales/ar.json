@@ -11,8 +11,9 @@
     "settings": {
         "title": "إعدادات",
         "choose_language": "اختر اللغة",
-        "english": "English",
-        "arabic": "العربية"
+        "english": "الإنجليزية (English)",
+        "arabic": "العربية",
+        "switching_language": "جاري تغيير اللغة..."
     },
     "navigation": {
         "home": "الرئيسية",

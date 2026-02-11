@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, I18nManager } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, I18nManager, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
@@ -7,9 +7,18 @@ import * as Updates from 'expo-updates';
 const LanguageSelector = () => {
     const { t, i18n } = useTranslation();
     const [modalVisible, setModalVisible] = useState(false);
+    const [isChanging, setIsChanging] = useState(false);
 
     const changeLanguage = async (lng: string) => {
         try {
+            if (lng === i18n.language) {
+                setModalVisible(false);
+                return;
+            }
+
+            setIsChanging(true);
+            setModalVisible(false);
+
             await AsyncStorage.setItem('user-language', lng);
             await i18n.changeLanguage(lng);
 
@@ -18,13 +27,16 @@ const LanguageSelector = () => {
             if (I18nManager.isRTL !== isRTL) {
                 I18nManager.allowRTL(isRTL);
                 I18nManager.forceRTL(isRTL);
-                // Force a reload to apply RTL changes
-                await Updates.reloadAsync();
+                // Give a small delay for the spinner to be seen before reload
+                setTimeout(async () => {
+                    await Updates.reloadAsync();
+                }, 500);
             } else {
-                setModalVisible(false);
+                setIsChanging(false);
             }
         } catch (error) {
             console.log('Error changing language', error);
+            setIsChanging(false);
         }
     };
 
@@ -71,6 +83,19 @@ const LanguageSelector = () => {
                         >
                             <Text style={styles.textStyleClose}>Cancel</Text>
                         </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                animationType="none"
+                transparent={true}
+                visible={isChanging}
+            >
+                <View style={styles.loadingOverlay}>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#10B981" />
+                        <Text style={styles.loadingText}>{t('settings.switching_language')}</Text>
                     </View>
                 </View>
             </Modal>
@@ -134,6 +159,23 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         fontWeight: 'bold',
         textAlign: 'center',
+    },
+    loadingOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingContainer: {
+        padding: 20,
+        borderRadius: 15,
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 15,
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
     },
 });
 

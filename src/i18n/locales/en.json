@@ -12,7 +12,8 @@
         "title": "Settings",
         "choose_language": "Choose Language",
         "english": "English",
-        "arabic": "Arabic"
+        "arabic": "العربية (Arabic)",
+        "switching_language": "Switching language..."
     },
     "navigation": {
         "home": "Home",

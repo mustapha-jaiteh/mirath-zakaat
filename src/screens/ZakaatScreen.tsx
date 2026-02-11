@@ -51,15 +51,20 @@ const ZakaatScreen = () => {
 
     const fetchRates = async () => {
         setLoading(true);
-        const data = await fetchGoldRates(currency);
-        if (data) {
-            setGoldRate(data.gold);
-            setSilverRate(data.silver);
-            setLastFetched(data.lastFetched);
-        } else {
-            Alert.alert('Error', 'Failed to fetch rates. Please check your connection or enter manually.');
+        try {
+            const data = await fetchGoldRates(currency);
+            if (data) {
+                setGoldRate(data.gold);
+                setSilverRate(data.silver);
+                setLastFetched(data.lastFetched);
+            } else {
+                Alert.alert('Error', 'Failed to fetch rates. Please check your connection or enter manually.');
+            }
+        } catch (err: any) {
+            Alert.alert('Fetch Error', err.message || 'An unknown error occurred while fetching rates.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const calculateZakaat = () => {
